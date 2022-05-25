@@ -36,8 +36,8 @@ void gerar_matrizes() {
         matriz2[i] = malloc(tamanho_matriz * sizeof(int));
         resultado[i] = malloc(tamanho_matriz * sizeof(int));
         for (j = 0; j < tamanho_matriz; j++) {
-            matriz1[i][j] = /*0rand()%10*/ 2;
-            matriz2[i][j] = /*rand()%10*/ 2;
+            matriz1[i][j] = rand()%10;
+            matriz2[i][j] = rand()%10;
             resultado[i][j] = 0;
         }
     }
