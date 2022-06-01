@@ -63,7 +63,7 @@ int buffet_queue_insert(buffet_t *self, student_t *student)
         Atualizar buffet (queue do lado certo recebe o id do student) essa parte pode ter MUTEX
     */
     /* Se o estudante vai para a fila esquerda */
-    if (student->left_or_right == 'L') 
+    if (student->left_or_right == 'L') // isso aqui tá errado, o left_or_right precisa ser setado assim que o estudante entra na fila do buffet, e não antes
     {
         /* Verifica se a primeira posição está vaga */
         if (!self[student->_id_buffet].queue_left[0])
