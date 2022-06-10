@@ -1,0 +1,14 @@
+Mudanças no código
+
+Na linha 36 foi adionado a função omp_set_num_threads
+passando como parâmetro o retorna da função omp_get_num_procs,
+assim podemos sinalizar ao programa o uso de todos os núcleos
+do computador.
+
+Na função mult_matrix as declarações das variáveis i, j, k
+são feitas no laço. O problema se encontrava na variável k
+que por não poder ser incluida na cláusula firstprivate, acaba sendo
+compartilhada entre as threads, gerando resultados inconsistentes.
+
+A clásula schedule(dynamic, 1) na linha 16, foi alterada para schedule(dynamic)
+pois o uso de somente 1 chunk retira o paralelismo pretendido.
