@@ -1,41 +1,45 @@
 #include <stdlib.h>
 
 #include "chef.h"
+#include "globals.h"
 #include "config.h"
 
 void *chef_run()
 {
     /* Insira sua lógica aqui */
-    /*
-        enquanto served_students(variável que precisa ser criada?) != all_students
-        check_food
-    */
     while (TRUE)
     {
-        msleep(5000); /* Pode retirar este sleep quando implementar a solução! */
+        // Verifica se todos os estudantes já se serviram
+        if (globals_get_students_served() == globals_get_students()) break;
+        // Checa se alguma bacia está vazia
+        chef_check_food();
     }
     
     pthread_exit(NULL);
 }
 
 
-void chef_put_food()
+void chef_put_food(buffet_t *buffet, int meal_position)
 {
-    /* Insira sua lógica aqui */
-    /*
-        aqui talvez tenha um lock
-        na bacia do buffet passado repor quantia (40)
-    */
+    // Coloca 40 porções de comida na bacia
+    // Ocupa a bacia, fazendo os estudantes esperarem
+    pthread_mutex_lock(&m_meals[buffet->_id * 5 + meal_position]);
+    buffet->_meal[meal_position] += 40;
+    pthread_mutex_unlock(&m_meals[buffet->_id * 5 + meal_position]);
 }
 void chef_check_food()
 {
-    /* Insira sua lógica aqui */
-    /*
-        para cada buffet (usar variável do configs para saber o número de buffets)
-        para cada bacia
-        checar se porção > 0
-        senão put_food(buffet, bacia)
-    */
+    buffet_t *buffets = globals_get_buffets();
+    int n_buffets = globals_get_buffets_number();
+    if (buffets == NULL) return;
+    // Passa por todos os buffets, checando se há comida
+    for (int i = 0; i < n_buffets; i++) {
+        for (int j = 0; j < 5; j++) {
+            // Se a bacia está vazia, repõem comida
+            if (buffets[i]._meal[j] <= 0)
+                chef_put_food(&buffets[i], j);
+        }
+    }
 }
 
 /* --------------------------------------------------------- */

@@ -13,45 +13,68 @@
 void* student_run(void *arg)
 {
     student_t *self = (student_t*) arg;
-    table_t *tables  = globals_get_table();
-
+    table_t *tables = globals_get_table();
+    // Insere estudante na fila(externa) do buffet
     worker_gate_insert_queue_buffet(self);
-    student_serve(self);
+    // Espera ser liberado para ocupar o buffet, e continuar sua execução
+    sem_wait(&self->sem_serve);
+    // Passa por todas as bacias se servindo
+    for (int i = 0; i < 5; i++) {
+        student_serve(self);
+    }
+    // Informa ao sistema que mais um estudante terminou de se servir
+    globals_student_served();
     student_seat(self, tables);
     student_leave(self, tables);
-
+    // Informa ao sistema que mais um estudante está saindo do restaurante
+    globals_student_leave_restaurant();
     pthread_exit(NULL);
 };
 
 void student_seat(student_t *self, table_t *table)
 {
-    /* Insira sua lógica aqui */
-    /*
-        Tem semáforo para o total de lugares para sentar
-        Quando liberar um espaço -> atualiza table (student att no buffet_next_step)
-    */
+    // Tenta sentar numa mesa caso haja disponibilidade
+    sem_wait(&s_table_seats);
+    int n_tables = globals_get_tables_number();
+    // Checa quais das mesas possue lugar
+    for (int i = 0; i < n_tables; i++) {
+        if (table[i]._empty_seats) {
+            // Ocupa espaço na mesa
+            pthread_mutex_lock(&m_tables[i]);
+            table[i]._empty_seats -= 1;
+            pthread_mutex_unlock(&m_tables[i]);
+            self->_id_table = table[i]._id;
+            break;
+        }
+    }
+    // Considerando que o estudante fica ao menos 5 segundos sentado na mesa
+    msleep(5000);
 }
 
 void student_serve(student_t *self)
 {
-    /* Insira sua lógica aqui */
-    // Muita dúvida nisso aqui (talvez esteja faltando um semaforo em algum lugar que eu não vejo)
-    /*
-        for i = 0 até 5
-        acessa a bacia do buffet
-        se a bacia for algum wish se serve
-        senão não
-        chama buffet_next_step passando seu buffet e o student
-    */
+    // Se a bacia for uma comida que o estudante quer, ele se serve
+    if (self->_wishes[self->_buffet_position]) {
+        buffet_t *buffets = globals_get_buffets();
+        // Considerando que o aluno demora ao menos 2 segundos para se servir
+        msleep(2000);
+        // Retira uma porção de comida da bacia
+        pthread_mutex_lock(&m_meals[self->_id_buffet * 5 + self->_buffet_position]);
+        buffets[self->_id_buffet]._meal[self->_buffet_position] -= 1;
+        pthread_mutex_unlock(&m_meals[self->_id_buffet * 5 + self->_buffet_position]);
+    }
+    // Após se servir o estudante anda para a próxima posição da fila do buffet
+    buffet_next_step(globals_get_buffets(), self);
 }
 
 void student_leave(student_t *self, table_t *table)
 {
-    /* Insira sua lógica aqui */
-    /*
-        Atualiza a table
-        Libera espaço no semáforo
-    */
+    // Desocupa um lugar da mesa
+    pthread_mutex_lock(&m_tables[self->_id_table]);
+    table[self->_id_table]._empty_seats += 1;
+    pthread_mutex_unlock(&m_tables[self->_id_table]);
+    // Libera semáforo das mesas
+    sem_post(&s_table_seats);
 }
 
 /* --------------------------------------------------------- */
@@ -75,10 +98,13 @@ student_t *student_init()
         student->_wishes[3] = 1;
     }
 
+    sem_init(&student->sem_serve, 0, 0);
+
     return student;
 };
 
 void student_finalize(student_t *self){
+    sem_destroy(&self->sem_serve);
     free(self);
 };
 

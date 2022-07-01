@@ -1,16 +1,13 @@
 #include <stdlib.h>
 #include "buffet.h"
 #include "config.h"
+#include "globals.h"
 
 
 void *buffet_run(void *arg)
 {   
     int all_students_entered = FALSE;
     buffet_t *self = (buffet_t*) arg;
-
-    /*
-        enquanto served_students(variável que precisa ser criada?) != all_students
-    */
     
     /*  O buffet funciona enquanto houver alunos na fila externa. */
     while (all_students_entered == FALSE)
@@ -18,15 +15,17 @@ void *buffet_run(void *arg)
         /* Cada buffet possui: Arroz, Feijão, Acompanhamento, Proteína e Salada */
         /* Máximo de porções por bacia (40 unidades). */
         _log_buffet(self);
-
-        msleep(5000); /* Pode retirar este sleep quando implementar a solução! */
+        // Verifica se todos os estudantes já sairam do restaurante
+        // Se verificar o número de estudantes que já se serviram o programa encerra
+        // antes dos últimos alunos terminarem de comer
+        all_students_entered = globals_get_students_leave_restaurant() == globals_get_students();
     }
-
     pthread_exit(NULL);
 }
 
 void buffet_init(buffet_t *self, int number_of_buffets)
 {
+    globals_set_buffets_number(number_of_buffets);
     int i = 0, j = 0;
     for (i = 0; i < number_of_buffets; i++)
     {
@@ -51,36 +50,36 @@ void buffet_init(buffet_t *self, int number_of_buffets)
 
 int buffet_queue_insert(buffet_t *self, student_t *student)
 {
-    /*
-        As queues precisam ser protegidas
-        para não haver caso de sobreescrever alguém na fila
-        A proteção pode ser dentro dos ifs
-        Cada queue é um mutex
-
-        ??? Talvez tenha um semáforo para a posição da queue (representando a bacia)
-
-        Atualizar student (_id_buffet, left_or_right, _buffet_position)
-        Atualizar buffet (queue do lado certo recebe o id do student) essa parte pode ter MUTEX
-    */
     /* Se o estudante vai para a fila esquerda */
-    if (student->left_or_right == 'L') // isso aqui tá errado, o left_or_right precisa ser setado assim que o estudante entra na fila do buffet, e não antes
+    if (student->left_or_right == 'L') 
     {
         /* Verifica se a primeira posição está vaga */
         if (!self[student->_id_buffet].queue_left[0])
         {
+            // Ocupa última posição na fila da esquerda (índice 0)
+            // Multiplicação por 5 pois há 5 posições na fila
+            // Multiplicação por 2 pois há 2 filas por buffet
+            sem_wait(&s_buffet_queue_position[5 * 2 * student->_id_buffet]);
             self[student->_id_buffet].queue_left[0] = student->_id;
             student->_buffet_position = 0;
+            // Libera o estudante para se servir
+            sem_post(&student->sem_serve);
             return TRUE;
         }
         return FALSE;
     }
     else
     {   /* Se o estudante vai para a fila direita */
+        /* Verifica se a primeira posição está vaga */
         if (!self[student->_id_buffet].queue_right[0])
         {
-            /* Verifica se a primeira posição está vaga */
+            // Ocupa posição na fila da direita
+            // Filas a direita possuem um offset de 5 (5 posições da fila da esquerda, que a precede no array)
+            sem_wait(&s_buffet_queue_position[5 * 2 * student->_id_buffet + 5]);
             self[student->_id_buffet].queue_right[0] = student->_id;
             student->_buffet_position = 0;
+            // Libera o estudante para se servir
+            sem_post(&student->sem_serve);
             return TRUE;
         }
         return FALSE;
@@ -90,34 +89,53 @@ int buffet_queue_insert(buffet_t *self, student_t *student)
 
 void buffet_next_step(buffet_t *self, student_t *student)
 {
-    /*
-        As queues precisam ser protegidas com MUTEX (um para cada queue)
-        para não haver caso de sobreescrever alguém na fila
-        A proteção pode ser dentro dos ifs
-
-        ??? Talvez tenha um semáforo para a posição da queue (representando a bacia)
-    */
     /* Se estudante ainda precisa se servir de mais alguma coisa... */
+    int position = student->_buffet_position;
+    // Considerando que o estudante demora ao menos 1 segundo para andar
+    msleep(1000);
     if (student->_buffet_position + 1 < 5)
     {    /* Está na fila esquerda? */
         if (student->left_or_right == 'L')
         {   /* Caminha para a posição seguinte da fila do buffet.*/
-            int position = student->_buffet_position;
-            self[student->_id_buffet].queue_left[position] = 0;
+            // Espera o próximo lugar da fila ficar vago
+            sem_wait(&s_buffet_queue_position[5 * 2 * student->_id_buffet + position + 1]);
             self[student->_id_buffet].queue_left[position + 1] = student->_id;
+            self[student->_id_buffet].queue_left[position] = 0;
+            // Libera sua posição anterior
+            sem_post(&s_buffet_queue_position[5 * 2 * student->_id_buffet + position]);
             student->_buffet_position = student->_buffet_position + 1;
         }else /* Está na fila direita? */
         {   /* Caminha para a posição seguinte da fila do buffet.*/
-            int position = student->_buffet_position;
-            self[student->_id_buffet].queue_right[position] = 0;
+            // Espera o próximo lugar da fila ficar vago, filas a direita possuem um offset de 5
+            sem_wait(&s_buffet_queue_position[5 * 2 * student->_id_buffet + position + 1 + 5]);
             self[student->_id_buffet].queue_right[position + 1] = student->_id;
+            self[student->_id_buffet].queue_right[position] = 0;
+            // Libera sua posição anterior, filas a direita possuem um offset de 5
+            sem_post(&s_buffet_queue_position[5 * 2 * student->_id_buffet + position + 5]);
             student->_buffet_position = student->_buffet_position + 1;
         }
+
+        if (position == 0) {
+            // Se a posição antiga for a primeira
+            // Libera a catraca
+            sem_wait(&s_buffet_detail_producer);
+            pthread_mutex_lock(&m_buffet_detail);
+            // Configura a fila que está vaga
+            // Isso é feito para ter uma ocupação mais homogênea das filas
+            global_id_buffet = student->_id_buffet;
+            global_left_or_right = student->left_or_right;
+            pthread_mutex_unlock(&m_buffet_detail);
+            sem_post(&s_buffet_detail_consumer);
+        }
+    } else { // Saindo do buffet e liberando a posição
+        if (student->left_or_right == 'L') {
+            self[student->_id_buffet].queue_left[position] = 0;
+            sem_post(&s_buffet_queue_position[5 * 2 * student->_id_buffet + position]);
+        } else {
+            self[student->_id_buffet].queue_right[position] = 0;
+            sem_post(&s_buffet_queue_position[5 * 2 * student->_id_buffet + position + 5]);
+        }
     }
-    /*
-        estudante sai do buffet
-        Atualizar estudante
-    */
 }
 
 /* --------------------------------------------------------- */

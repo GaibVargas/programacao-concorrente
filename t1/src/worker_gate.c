@@ -4,42 +4,57 @@
 #include "globals.h"
 #include "config.h"
 
+char left_or_right = 'L';
+// Controla se os primeiros estudantes já entraram
+// Objetivo: Colocar os primeiros estudantes em filas diferentes
+int first_horda = 0;
 
+int id_buffet = 0;
 
-void worker_gate_look_queue()
+int worker_gate_look_queue()
 {
-    /* Insira aqui sua lógica */
-    /*
-        Olha a queue._length (esse queue também precisa de um MUTEX)
-        Retorna true ou false
-        True -> quando ainda há fila
-        False -> quando não há fila (dá um break no loop infinito)    
-    */
+    queue_t *queue = globals_get_queue();
+    return queue->_length > 0;
 }
 
 void worker_gate_remove_student()
 {
-    /* Insira aqui sua lógica */
-    /* Versão 1.0
-        Pega o student do queue de fora do RU (não esquecer o MUTEX do queue)
-        Enviar student e buffet para insert_queue_buffet
-    */
-   /*   Versão 2.0
-        Pega student do queue geral (MUTEX)
-        Faz buffet_queue_insert para cada buffet
-        Somar number_students
-   */
+    // Remove estudante da primeira posição da fila
+    pthread_mutex_lock(&m_external_queue);
+    queue_t *queue = globals_get_queue();
+    student_t *student = queue_remove(queue);
+    pthread_mutex_unlock(&m_external_queue);
+    // Verifica se o buffet acabou de abrir
+    // Se sim, coloca os primeiros estudantes em filas diferentes
+    if (first_horda < globals_get_buffets_number() * 2) {
+        // Configura informações dos estudantes (buffet e lado da fila)
+        student->left_or_right = left_or_right;
+        student->_id_buffet = id_buffet;
+        if (left_or_right == 'R') id_buffet++;
+        left_or_right = left_or_right == 'L' ? 'R' : 'L';
+        first_horda++;
+    } else { // O buffet já foi ocupado pelos primeiros estudantes da fila externa
+        // Configura informações dos estudantes (buffet e lado da fila)
+        sem_wait(&s_buffet_detail_consumer);
+        student->left_or_right = global_left_or_right;
+        student->_id_buffet = global_id_buffet;
+        sem_post(&s_buffet_detail_producer);
+    }
+    // Insere estudante na fila (interna) do buffet
+    buffet_queue_insert(globals_get_buffets(), student);
 }
 
-void worker_gate_look_buffet()
+int worker_gate_look_buffet()
 {
-    /* Insira aqui sua lógica */
-    /*
-        Consulta todos os buffets
-        Consulta o fim da fila de todos os buffets
-        Se o final da fila for 0 -> chama o remove_students
-        Senão continua o loop
-    */
+    buffet_t *buffets = globals_get_buffets();
+    int buffets_number = globals_get_buffets_number();
+    // Verifica se o buffet está disponível a receber um novo estudante na fila
+    for (int i = 0; i < buffets_number; i++) {
+        if (!buffets[i].queue_left[0] || !buffets[i].queue_right[0]) {
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 void *worker_gate_run(void *arg)
@@ -47,26 +62,34 @@ void *worker_gate_run(void *arg)
     int all_students_entered;
     int number_students;
 
+    int students_on_queue = 0;
+    int buffet_has_slot = 0;
+
     number_students = *((int *)arg);
     all_students_entered = number_students > 0 ? FALSE : TRUE;
 
     while (all_students_entered == FALSE)
     {
-        /*  Versã0 1.0
-            Chama look_queue e avalia (break ou continua)
-            Chama look_buffet
-            Avaliar all_students_entered novamente
-        */
-        /*  Versã0 2.0
-            Chama look_queue e avalia (break ou continua)
-            Chama look_buffet
-        */
-        worker_gate_look_queue();
-        worker_gate_look_buffet();
-        worker_gate_remove_student();
-        msleep(5000); /* Pode retirar este sleep quando implementar a solução! */
+        // Verifica a fila externa
+        students_on_queue = worker_gate_look_queue();
+        // Há estudantes na fila externa?
+        if (students_on_queue) {
+            buffet_has_slot = worker_gate_look_buffet();
+            // Há espaço em algum buffet?
+            if (buffet_has_slot) {
+                // Remove estudante da fila externa e o coloca na fila interna de algum buffet
+                worker_gate_remove_student();
+                number_students--;
+                // Verifica se ainda há estudantes na fila externa
+                all_students_entered = number_students > 0 ? FALSE : TRUE;
+            }
+        }
     }
-
+    // Cria espaço para os estudantes no buffet que vão caminhar após o fechamento da catraca
+    // Resolve um bug de quando o worker_gate sair, os últimos estudantes ficarem travados na posição 2 do buffet
+    // Mulplicação por 2 pois são duas filas por buffet
+    for (int i = 0; i < globals_get_buffets_number() * 2; i++)
+        sem_post(&s_buffet_detail_producer);
     pthread_exit(NULL);
 }
 
@@ -84,16 +107,9 @@ void worker_gate_finalize(worker_gate_t *self)
 
 void worker_gate_insert_queue_buffet(student_t *student)
 {
-    /* Insira aqui sua lógica */
-    /*  Versão 1.0
-        Identificar o lado do buffet que está livre
-        Atualizar student (_id_buffet, left_or_right, _buffet_position)
-        Atualizar buffet (queue do lado certo recebe o id do student) essa parte pode ter MUTEX
-        Somar number_students
-    */
-   /*   Versão 2.0
-        Faz buffet_queue_insert para cada buffet
-        Se TRUE em alguma -> somar number_students e retorna
-        Senão colocar student no queue geral (MUTEX)
-   */
+    // Insere estudante na fila externa do buffet
+    pthread_mutex_lock(&m_external_queue);
+    queue_t *queue = globals_get_queue();
+    queue_insert(queue, student);
+    pthread_mutex_unlock(&m_external_queue);
 }

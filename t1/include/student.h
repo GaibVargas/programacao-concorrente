@@ -2,6 +2,7 @@
 #define __STUDENT_H__
 
 #include <pthread.h>
+#include <semaphore.h>
 #include "table.h"
 
 typedef struct student
@@ -11,7 +12,9 @@ typedef struct student
     int _buffet_position;                   /* Posição na fila do buffet*/
     int _id_buffet;                         /* Qual buffet o estudante está alocado?*/
     char left_or_right;                     /* Fila da esquerda(L) ou da direita(R)*/
+    int _id_table;                          /* Id da mesa onde o estudante se sentou */
     pthread_t thread;                       /* A thread */
+    sem_t sem_serve;                        /* Semáforo que controla se um estudante pode se servir */
 } student_t;
 
 /**
