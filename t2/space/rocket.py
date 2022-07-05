@@ -1,6 +1,6 @@
 from random import randrange, random
 from time import sleep
-
+import globals
 
 class Rocket:
 
@@ -16,10 +16,13 @@ class Rocket:
             
 
     def nuke(self, planet): # Permitida a alteração
-        self.damage()
+        target = globals.get_target_lock(planet.name.lower())
+        target.acquire()
+        planet.terraform -= self.damage() * 100
+        target.release()
+        globals.get_nuke_detection_semaphore(planet.name.lower()).release()
         print(f"[EXPLOSION] - The {self.name} ROCKET reached the planet {planet.name} on North Pole")
         print(f"[EXPLOSION] - The {self.name} ROCKET reached the planet {planet.name} on South Pole")
-        pass
     
     def voyage(self, planet): # Permitida a alteração (com ressalvas)
 
@@ -28,7 +31,8 @@ class Rocket:
         # usar essa função.
         self.simulation_time_voyage(planet)
         failure =  self.do_we_have_a_problem()
-        self.nuke(planet)
+        if not failure:
+            self.nuke(planet)
 
 
 

@@ -19,7 +19,7 @@ class SpaceBase(Thread):
     def print_space_base_info(self):
         print(f"🔭 - [{self.name}] → 🪨  {self.uranium}/{self.constraints[0]} URANIUM  ⛽ {self.fuel}/{self.constraints[1]}  🚀 {self.rockets}/{self.constraints[2]}")
     
-    def base_rocket_resources(self, rocket_name):
+    def base_rocket_resources(self, rocket_name): # sinceramente, parece inútil
         match rocket_name:
             case 'DRAGON':
                 if self.uranium > 35 and self.fuel > 50:
@@ -57,7 +57,6 @@ class SpaceBase(Thread):
         if (mine.unities >= fuel_unities_to_minered):
             mine.unities -= fuel_unities_to_minered
             self.fuel += fuel_unities_to_minered
-            print(f"[{self.name}] Pegando combustível de {mine.location}")
         globals.release_oil()
 
     def refuel_uranium(self, mine):
@@ -68,7 +67,6 @@ class SpaceBase(Thread):
         if (mine.unities >= uranium_unities_to_minered):
             mine.unities -= uranium_unities_to_minered
             self.uranium += uranium_unities_to_minered
-            print(f"[{self.name}] Pegando urânio de {mine.location}")
         globals.release_uranium()   
 
     def mine_resources(self, mines):
@@ -76,7 +74,6 @@ class SpaceBase(Thread):
         self.refuel_uranium(mines['uranium_earth'])
     
     def request_resources(self):
-        print("Lua pedindo arrego")
         if (self.fuel < 50):
             globals.acquire_moon_needs()
             globals.moon_needs['fuel'] = True
@@ -110,12 +107,29 @@ class SpaceBase(Thread):
         globals.release_moon_resquest()
 
     def construct_new_rocket(self):
+        globals.acquire_target_options()
+        target_options = globals.get_target_options()
+
+        if len(target_options) == 0:
+            globals.release_target_options()
+            return
+        
+        target_option = choice(target_options)
+        target_lock = globals.get_target_lock(target_option)
+        target = globals.get_planets_ref()[target_option]
+        target_lock.acquire()
+
+        if (target.terraform <= 0):
+            globals.remove_target_options(target_option)
+            target_lock.release()
+            globals.release_target_options()
+            return
+
+        target_lock.release()
+        globals.release_target_options()
         options = ['DRAGON', 'FALCON']
         model = choice(options)
-        target_options = ['mars', 'io', 'europa', 'ganimedes']
-        target = choice(target_options)
-        self.rockets_on_base.append(Rocket(model))
-        self.targets.append(globals.get_planets_ref()[target])
+        self.rockets_on_base.append({ 'rocket': Rocket(model), 'target': target })
         self.rockets += 1
     
     def fuel_base_rockets(self):
@@ -142,14 +156,18 @@ class SpaceBase(Thread):
                 'FALCON': 90,
             }
         }
-        for index, rocket in enumerate(self.rockets_on_base):
+        for rocket_info in self.rockets_on_base:
+            rocket = rocket_info['rocket']
+            target = rocket_info['target']
             if rocket.name != 'LION':
                 if (self.fuel >= fuel_needs[self.name][rocket.name] and self.uranium >= 35):
                     self.fuel -= fuel_needs[self.name][rocket.name]
                     self.uranium -= 35
-                    rocket.launch(self, self.targets[index])
-                    self.rockets_on_base.remove(rocket)
-                    self.targets.pop(index)
+                    # lógica do target tem que ser aqui
+                    rocket_thread = Thread(target=rocket.launch, args=(self, target))
+                    self.launched_rockets.append(rocket_thread) # talvez não precise
+                    rocket_thread.start()
+                    self.rockets_on_base.remove(rocket_info)
                     self.rockets -= 1
                     return
 
@@ -162,6 +180,7 @@ class SpaceBase(Thread):
             pass
         
         self.rockets_on_base = []
+        self.launched_rockets = []
         self.targets = []
 
         while(True):
@@ -173,7 +192,6 @@ class SpaceBase(Thread):
                     self.construct_new_rocket()
                 self.fuel_base_rockets()
                 globals.acquire_print()
-                print(self.rockets_on_base)
                 self.print_space_base_info()
                 globals.release_print()
             # else:

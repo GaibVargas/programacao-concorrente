@@ -12,11 +12,10 @@ class Planet(Thread):
         self.name = name
 
     def nuke_detected(self):
-        while(self.terraform > 0):
-            before_percentage = self.terraform
-            while(before_percentage == self.terraform):
-                pass
-            print(f"[NUKE DETECTION] - The planet {self.name} was bombed. {self.terraform}% UNHABITABLE")
+        before_percentage = self.terraform
+        while(before_percentage == self.terraform):
+            pass
+        print(f"[NUKE DETECTION] - The planet {self.name} was bombed. {self.terraform}% UNHABITABLE")
 
     def print_planet_info(self):
         print(f"🪐 - [{self.name}] → {self.terraform}% UNINHABITABLE")
@@ -30,4 +29,5 @@ class Planet(Thread):
             pass
 
         while(True):
+            globals.get_nuke_detection_semaphore(self.name.lower()).acquire()
             self.nuke_detected()

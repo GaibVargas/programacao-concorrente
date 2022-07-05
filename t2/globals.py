@@ -1,4 +1,4 @@
-from threading import Lock
+from threading import Lock, Semaphore
 
 #  A total alteração deste arquivo é permitida.
 #  Lembre-se de que algumas variáveis globais são setadas no arquivo simulation.py
@@ -17,6 +17,21 @@ simulation_time = None
 
 mutex_oil = Lock()
 mutex_uranium = Lock()
+target_options = ['mars', 'io', 'europa', 'ganimedes']
+mutex_target_options = Lock()
+targets = {
+    'mars': Lock(),
+    'io': Lock(),
+    'europa': Lock(),
+    'ganimedes': Lock()
+}
+nuke_detection = {
+    'mars': Semaphore(value=0),
+    'io': Semaphore(value=0),
+    'europa': Semaphore(value=0),
+    'ganimedes': Semaphore(value=0)
+}
+
 mutex_moon_needs = Lock()
 mutex_moon_request = Lock()
 moon_needs = {
@@ -27,6 +42,30 @@ moon_request = {
     'request': False,
     'response': False,
 }
+
+def get_nuke_detection_semaphore(planet):
+    global nuke_detection
+    return nuke_detection[planet]
+
+def acquire_target_options():
+    global mutex_target_options
+    mutex_target_options.acquire()
+
+def release_target_options():
+    global mutex_target_options
+    mutex_target_options.release()
+
+def get_target_options():
+    global target_options
+    return target_options
+
+def remove_target_options(target):
+    global target_options
+    target_options.remove(target)
+
+def get_target_lock(target):
+    global targets
+    return targets[target]
 
 def acquire_moon_request():
     global mutex_moon_request
