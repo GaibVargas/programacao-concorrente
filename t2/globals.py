@@ -15,6 +15,51 @@ bases = {}
 mines = {}
 simulation_time = None
 
+mutex_oil = Lock()
+mutex_uranium = Lock()
+mutex_moon_needs = Lock()
+mutex_moon_request = Lock()
+moon_needs = {
+    'fuel': False,
+    'uranium': False,
+}
+moon_request = {
+    'request': False,
+    'response': False,
+}
+
+def acquire_moon_request():
+    global mutex_moon_request
+    mutex_moon_request.acquire()
+
+def release_moon_resquest():
+    global mutex_moon_request
+    mutex_moon_request.release()
+
+def acquire_moon_needs():
+    global mutex_moon_needs
+    mutex_moon_needs.acquire()
+
+def release_moon_needs():
+    global mutex_moon_needs
+    mutex_moon_needs.release()
+
+def acquire_oil():
+    global mutex_oil
+    mutex_oil.acquire()
+
+def release_oil():
+    global mutex_oil
+    mutex_oil.release()
+
+def acquire_uranium():
+    global mutex_uranium
+    mutex_uranium.acquire()
+
+def release_uranium():
+    global mutex_uranium
+    mutex_uranium.release()
+
 def acquire_print():
     global mutex_print
     mutex_print.acquire()
