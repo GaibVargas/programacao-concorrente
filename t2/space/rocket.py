@@ -23,6 +23,17 @@ class Rocket:
     def init_resources(self):
         self.fuel = 0
         self.uranium = 0
+    
+    def prepare_to_launch(self, base, planet):
+        globals.get_target_nuke_semaphore(planet.name.lower()).acquire()
+        acquire = globals.get_base_launch(base.name.lower()).acquire(timeout=0.5)
+        globals.get_base_rockets_lock(base.name.lower()).acquire()
+        base.rockets -= 1
+        globals.get_base_rockets_lock(base.name.lower()).release()
+        self.launch(base, planet)
+        if acquire:
+            globals.get_base_launch(base.name.lower()).release()
+        globals.get_target_nuke_semaphore(planet.name.lower()).release()
  
     def nuke(self, planet): # Permitida a alteração
         target = globals.get_target_lock(planet.name.lower())
@@ -31,7 +42,7 @@ class Rocket:
         target.release()
         globals.get_nuke_detection_semaphore(planet.name.lower()).release()
         print(f"[EXPLOSION] - The {self.name} ROCKET reached the planet {planet.name} on North Pole")
-        print(f"[EXPLOSION] - The {self.name} ROCKET reached the planet {planet.name} on South Pole")
+        # print(f"[EXPLOSION] - The {self.name} ROCKET reached the planet {planet.name} on South Pole")
     
     def voyage(self, planet): # Permitida a alteração (com ressalvas)
 
@@ -42,7 +53,6 @@ class Rocket:
         failure =  self.do_we_have_a_problem()
         if not failure:
             self.nuke(planet)
-
 
 
     ####################################################

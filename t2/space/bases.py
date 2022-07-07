@@ -111,7 +111,7 @@ class SpaceBase(Thread):
         model = choice(options)
         rocket = Rocket(model)
         rocket.init_resources()
-        self.rockets_on_base.append(rocket)
+        self.rockets_to_fuel.append(rocket)
         self.rockets += 1
     
     def choose_target(self):
@@ -153,7 +153,7 @@ class SpaceBase(Thread):
         if (self.rockets == 0):
             return
         fuel_needs = globals.get_fuels_needs()
-        for rocket in self.rockets_on_base:
+        for rocket in self.rockets_to_fuel:
             if rocket.name != 'LION':
                 if self.fuel > 0:
                     self.refuel_rocket(rocket, fuel_needs[self.name][rocket.name])
@@ -162,15 +162,14 @@ class SpaceBase(Thread):
 
     def try_launch_rocket(self):
         fuel_needs = globals.get_fuels_needs()
-        for rocket in self.rockets_on_base:
+        for rocket in self.rockets_to_fuel:
             if (rocket.fuel >= fuel_needs[self.name][rocket.name] and rocket.uranium >= 35):
                 [must_continue ,target] = self.choose_target()
                 if not must_continue:
                     return False
-                rocket_thread = Thread(target=rocket.launch, args=(self, target))
+                rocket_thread = Thread(target=rocket.prepare_to_launch, args=(self, target))
                 rocket_thread.start()
-                self.rockets_on_base.remove(rocket)
-                self.rockets -= 1
+                self.rockets_to_fuel.remove(rocket)
                 return True
         return True
 
@@ -182,9 +181,8 @@ class SpaceBase(Thread):
         while(globals.get_release_system() == False):
             pass
         
-        self.rockets_on_base = []
+        self.rockets_to_fuel = []
         self.launched_rockets = []
-        self.targets = []
 
         while(True and len(globals.get_target_options()) > 0):
             mines = globals.get_mines_ref()

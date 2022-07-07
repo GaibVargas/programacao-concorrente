@@ -1,4 +1,3 @@
-from concurrent.futures import thread
 from threading import Lock, Semaphore
 
 #  A total alteração deste arquivo é permitida.
@@ -27,6 +26,24 @@ targets = {
     'io': Lock(),
     'europa': Lock(),
     'ganimedes': Lock()
+}
+targets_nuke = {
+    'mars': Semaphore(value=2),
+    'io': Semaphore(value=2),
+    'europa': Semaphore(value=2),
+    'ganimedes': Semaphore(value=2)
+}
+base_launch = {
+    'alcantara': Lock(),
+    'canaveral cape': Lock(),
+    'moscow': Lock(),
+    'moon': Lock()
+}
+base_rockets_number = {
+    'alcantara': Lock(),
+    'canaveral cape': Lock(),
+    'moscow': Lock(),
+    'moon': Lock()
 }
 nuke_detection = {
     'mars': Semaphore(value=0),
@@ -65,6 +82,18 @@ moon_request = {
     'request': False,
     'response': False,
 }
+
+def get_base_rockets_lock(base):
+    global base_rockets_number
+    return base_rockets_number[base]
+
+def get_base_launch(base):
+    global base_launch
+    return base_launch[base]
+
+def get_target_nuke_semaphore(target):
+    global targets_nuke
+    return targets_nuke[target]
 
 def get_thread_wait():
     global threads_to_wait
