@@ -38,6 +38,6 @@ class StoreHouse(Thread):
 
         while(globals.get_release_system() == False):
             pass
-
+        # Aprimorei a cláusula para não rodar para sempre
         while(True and not globals.all_is_done()):
             self.produce()

@@ -25,15 +25,18 @@ class Rocket:
         self.uranium = 0
     
     def prepare_to_launch(self, base, planet):
-        globals.get_target_nuke_semaphore(planet.name.lower()).acquire()
-        acquire = globals.get_base_launch(base.name.lower()).acquire(timeout=0.5)
+        acquire_nuked_planet = globals.get_target_nuke_semaphore(planet.name.lower()).acquire(timeout=0.5)
+        acquire_base = globals.get_base_launch(base.name.lower()).acquire(timeout=0.5)
         globals.get_base_rockets_lock(base.name.lower()).acquire()
         base.rockets -= 1
         globals.get_base_rockets_lock(base.name.lower()).release()
+        if globals.all_is_done():
+            return
         self.launch(base, planet)
-        if acquire:
+        if acquire_base:
             globals.get_base_launch(base.name.lower()).release()
-        globals.get_target_nuke_semaphore(planet.name.lower()).release()
+        if acquire_nuked_planet:
+            globals.get_target_nuke_semaphore(planet.name.lower()).release()
  
     def nuke(self, planet): # Permitida a alteração
         target = globals.get_target_lock(planet.name.lower())

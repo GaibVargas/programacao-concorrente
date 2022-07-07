@@ -167,10 +167,9 @@ class SpaceBase(Thread):
                 [must_continue ,target] = self.choose_target()
                 if not must_continue:
                     return False
-                rocket_thread = Thread(target=rocket.prepare_to_launch, args=(self, target))
-                rocket_thread.start()
+                rocket_executer = globals.get_rocket_executer()
+                rocket_executer.submit(rocket.prepare_to_launch, base=self, planet=target)
                 self.rockets_to_fuel.remove(rocket)
-                return True
         return True
 
     def run(self):

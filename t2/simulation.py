@@ -110,6 +110,7 @@ def main():
     moon.join()
     uranium_earth.join()
     oil_earth.join()
+    globals.get_rocket_executer().shutdown()
     time_simulation.join()
     print('******************ACABOU***********************')
     print(globals.get_simulation_time().simulation_time())

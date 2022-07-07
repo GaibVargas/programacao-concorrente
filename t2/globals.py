@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, Semaphore
 
 #  A total alteração deste arquivo é permitida.
@@ -82,6 +83,11 @@ moon_request = {
     'request': False,
     'response': False,
 }
+rocket_executer = ThreadPoolExecutor()
+
+def get_rocket_executer():
+    global rocket_executer
+    return rocket_executer
 
 def get_base_rockets_lock(base):
     global base_rockets_number
