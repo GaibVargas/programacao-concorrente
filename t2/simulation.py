@@ -99,6 +99,20 @@ def main():
     print("\n\n##################################### SIMULATION STARTED #####################################\n")
     globals.set_release_system()
 
+    # Minhas mudanças para conseguir terminar a execução do programa
+    mars.join()
+    io.join()
+    ganimedes.join()
+    europa.join()
+    alcantara.join()
+    canaveral_cape.join()
+    moscow.join()
+    moon.join()
+    uranium_earth.join()
+    oil_earth.join()
+    time_simulation.join()
+    print('******************ACABOU***********************')
+    print(globals.get_simulation_time().simulation_time())
 
 if __name__ == "__main__":
     main()

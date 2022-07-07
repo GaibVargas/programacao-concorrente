@@ -39,5 +39,5 @@ class Pipeline(Thread):
         while(globals.get_release_system() == False):
             pass
 
-        while(True):
+        while(True and not globals.all_is_done()):
             self.produce()

@@ -40,3 +40,7 @@ Alvos:
 Para chegar na Lua o foguete leva 4 dias
 
 Objetivo Final: saber em quantos anos é possível terraformar todos os alvos
+
+TODO:
+Botar semáforos para explosão simultânea não acontecer
+Investigar por que está tão rápido (demorava muito antes (100+ anos))

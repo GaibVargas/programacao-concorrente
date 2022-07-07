@@ -1,3 +1,4 @@
+from concurrent.futures import thread
 from threading import Lock, Semaphore
 
 #  A total alteração deste arquivo é permitida.
@@ -15,6 +16,8 @@ bases = {}
 mines = {}
 simulation_time = None
 
+threads_to_wait = 8
+mutex_threads_to_wait = Lock()
 mutex_oil = Lock()
 mutex_uranium = Lock()
 target_options = ['mars', 'io', 'europa', 'ganimedes']
@@ -31,7 +34,27 @@ nuke_detection = {
     'europa': Semaphore(value=0),
     'ganimedes': Semaphore(value=0)
 }
-
+fuel_needs = {
+    'ALCANTARA': {
+        'DRAGON': 70,
+        'FALCON': 100,
+        'LION': 100,
+    },
+    'CANAVERAL CAPE': {
+        'DRAGON': 100,
+        'FALCON': 120,
+        'LION': 115,
+    },
+    'MOSCOW': {
+        'DRAGON': 100,
+        'FALCON': 120,
+        'LION': 115,
+    },
+    'MOON': {
+        'DRAGON': 50,
+        'FALCON': 90,
+    }
+}
 mutex_moon_needs = Lock()
 mutex_moon_request = Lock()
 moon_needs = {
@@ -42,6 +65,24 @@ moon_request = {
     'request': False,
     'response': False,
 }
+
+def get_thread_wait():
+    global threads_to_wait
+    return threads_to_wait
+
+def decrement_threads_to_wait():
+    global threads_to_wait, mutex_threads_to_wait
+    mutex_threads_to_wait.acquire()
+    threads_to_wait -= 1
+    print(f"Ainda faltam {threads_to_wait}")
+    mutex_threads_to_wait.release()
+
+def all_is_done():
+    return threads_to_wait == 0
+
+def get_fuels_needs():
+    global fuel_needs
+    return fuel_needs
 
 def get_nuke_detection_semaphore(planet):
     global nuke_detection
@@ -108,7 +149,8 @@ def release_print():
     mutex_print.release()
 
 def set_planets_ref(all_planets):
-    global planets
+    global planets, threads_to_wait
+    # threads_to_wait += len(all_planets.keys())
     planets = all_planets
 
 def get_planets_ref():
@@ -116,7 +158,8 @@ def get_planets_ref():
     return planets
 
 def set_bases_ref(all_bases):
-    global bases
+    global bases, threads_to_wait
+    # threads_to_wait += len(all_bases.keys())
     bases = all_bases
 
 def get_bases_ref():

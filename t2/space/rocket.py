@@ -14,11 +14,20 @@ class Rocket:
             self.fuel_cargo = 0
             self.uranium_cargo = 0
             
-
+    def refuel(self, value):
+        self.fuel += value
+    
+    def refuel_uranium(self, value):
+        self.uranium += value
+    
+    def init_resources(self):
+        self.fuel = 0
+        self.uranium = 0
+ 
     def nuke(self, planet): # Permitida a alteração
         target = globals.get_target_lock(planet.name.lower())
         target.acquire()
-        planet.terraform -= self.damage() * 100
+        planet.terraform -= self.damage() * 10
         target.release()
         globals.get_nuke_detection_semaphore(planet.name.lower()).release()
         print(f"[EXPLOSION] - The {self.name} ROCKET reached the planet {planet.name} on North Pole")

@@ -107,69 +107,72 @@ class SpaceBase(Thread):
         globals.release_moon_resquest()
 
     def construct_new_rocket(self):
-        globals.acquire_target_options()
-        target_options = globals.get_target_options()
-
-        if len(target_options) == 0:
-            globals.release_target_options()
-            return
-        
-        target_option = choice(target_options)
-        target_lock = globals.get_target_lock(target_option)
-        target = globals.get_planets_ref()[target_option]
-        target_lock.acquire()
-
-        if (target.terraform <= 0):
-            globals.remove_target_options(target_option)
-            target_lock.release()
-            globals.release_target_options()
-            return
-
-        target_lock.release()
-        globals.release_target_options()
         options = ['DRAGON', 'FALCON']
         model = choice(options)
-        self.rockets_on_base.append({ 'rocket': Rocket(model), 'target': target })
+        rocket = Rocket(model)
+        rocket.init_resources()
+        self.rockets_on_base.append(rocket)
         self.rockets += 1
     
+    def choose_target(self):
+        while True:
+            globals.acquire_target_options()
+            target_options = globals.get_target_options()
+
+            if len(target_options) == 0:
+                globals.release_target_options()
+                return [False, None]
+            
+            target_option = choice(target_options)
+            target_lock = globals.get_target_lock(target_option)
+            target = globals.get_planets_ref()[target_option]
+            target_lock.acquire()
+
+            if (target.terraform <= 0):
+                globals.remove_target_options(target_option)
+                target_lock.release()
+                globals.release_target_options()
+            else:
+                target_lock.release()
+                globals.release_target_options()
+                return [True, target]
+    
+    def refuel_rocket(self, rocket, fuel_need):
+        rocket_need = fuel_need - rocket.fuel
+        if self.fuel >= rocket_need:
+            rocket.refuel(rocket_need)
+            self.fuel -= rocket_need
+
+    def refuel_rocket_uranium(self, rocket, need):
+        uranium_needed = need - rocket.uranium
+        if self.uranium >= uranium_needed:
+            self.uranium -= uranium_needed
+            rocket.refuel_uranium(uranium_needed)
+
     def fuel_base_rockets(self):
         if (self.rockets == 0):
             return
-        fuel_needs = {
-            'ALCANTARA': {
-                'DRAGON': 70,
-                'FALCON': 100,
-                'LION': 100,
-            },
-            'CANAVERAL CAPE': {
-                'DRAGON': 100,
-                'FALCON': 120,
-                'LION': 115,
-            },
-            'MOSCOW': {
-                'DRAGON': 100,
-                'FALCON': 120,
-                'LION': 115,
-            },
-            'MOON': {
-                'DRAGON': 50,
-                'FALCON': 90,
-            }
-        }
-        for rocket_info in self.rockets_on_base:
-            rocket = rocket_info['rocket']
-            target = rocket_info['target']
+        fuel_needs = globals.get_fuels_needs()
+        for rocket in self.rockets_on_base:
             if rocket.name != 'LION':
-                if (self.fuel >= fuel_needs[self.name][rocket.name] and self.uranium >= 35):
-                    self.fuel -= fuel_needs[self.name][rocket.name]
-                    self.uranium -= 35
-                    # lógica do target tem que ser aqui
-                    rocket_thread = Thread(target=rocket.launch, args=(self, target))
-                    self.launched_rockets.append(rocket_thread) # talvez não precise
-                    rocket_thread.start()
-                    self.rockets_on_base.remove(rocket_info)
-                    self.rockets -= 1
-                    return
+                if self.fuel > 0:
+                    self.refuel_rocket(rocket, fuel_needs[self.name][rocket.name])
+                if self.uranium > 0:
+                    self.refuel_rocket_uranium(rocket, 35)
+
+    def try_launch_rocket(self):
+        fuel_needs = globals.get_fuels_needs()
+        for rocket in self.rockets_on_base:
+            if (rocket.fuel >= fuel_needs[self.name][rocket.name] and rocket.uranium >= 35):
+                [must_continue ,target] = self.choose_target()
+                if not must_continue:
+                    return False
+                rocket_thread = Thread(target=rocket.launch, args=(self, target))
+                rocket_thread.start()
+                self.rockets_on_base.remove(rocket)
+                self.rockets -= 1
+                return True
+        return True
 
     def run(self):
         globals.acquire_print()
@@ -183,17 +186,25 @@ class SpaceBase(Thread):
         self.launched_rockets = []
         self.targets = []
 
-        while(True):
+        while(True and len(globals.get_target_options()) > 0):
             mines = globals.get_mines_ref()
             if (self.name != "MOON"):
                 self.mine_resources(mines)
                 # self.check_moon_needs() continua no final
                 if (self.rockets < self.constraints[2]):
                     self.construct_new_rocket()
-                self.fuel_base_rockets()
+                if (self.rockets > 0):
+                    self.fuel_base_rockets()
+                must_continue = self.try_launch_rocket()
+                if not must_continue:
+                    break
                 globals.acquire_print()
                 self.print_space_base_info()
                 globals.release_print()
-            # else:
+            else:
+                break
             #     self.request_resources()
+        
+        print(f'************************{self.name} TERMINANDO***********************')
+        globals.decrement_threads_to_wait()
             
