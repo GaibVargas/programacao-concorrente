@@ -34,6 +34,9 @@ targets_nuke = {
     'europa': Semaphore(value=2),
     'ganimedes': Semaphore(value=2)
 }
+last_nuked_pole = {
+    ''
+}
 base_launch = {
     'alcantara': Lock(),
     'canaveral cape': Lock(),
@@ -90,7 +93,7 @@ def get_moon_request():
     return moon_request
 
 def set_moon_request(key, value):
-    global moon_request
+    global moon_request, mutex_moon_request
     moon_request[key] = value
 
 def set_moon_needs(key, value):
@@ -125,7 +128,6 @@ def decrement_threads_to_wait():
     global threads_to_wait, mutex_threads_to_wait
     mutex_threads_to_wait.acquire()
     threads_to_wait -= 1
-    print(f"Ainda faltam {threads_to_wait}")
     mutex_threads_to_wait.release()
 
 def all_is_done():
@@ -201,7 +203,6 @@ def release_print():
 
 def set_planets_ref(all_planets):
     global planets, threads_to_wait
-    # threads_to_wait += len(all_planets.keys())
     planets = all_planets
 
 def get_planets_ref():
@@ -210,7 +211,6 @@ def get_planets_ref():
 
 def set_bases_ref(all_bases):
     global bases, threads_to_wait
-    # threads_to_wait += len(all_bases.keys())
     bases = all_bases
 
 def get_bases_ref():

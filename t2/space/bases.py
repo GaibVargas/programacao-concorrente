@@ -74,17 +74,16 @@ class SpaceBase(Thread):
         self.refuel_uranium(mines['uranium_earth'])
     
     def request_resources(self):
-        globals.acquire_moon_needs()
         globals.acquire_moon_request()
-        if not globals.get_moon_request()['response']:
-            if (self.fuel <= 90 or self.fuel + 120 <= self.constraints[1]):
-                globals.set_moon_needs('fuel', True)
-                globals.set_moon_request('request', True)
-            if (self.uranium <= 35 or self.uranium + 75 <= self.constraints[0]):
-                globals.set_moon_needs('uranium', True)
-                globals.set_moon_request('request', True)
-        globals.release_moon_resquest()
+        globals.acquire_moon_needs()
+        if (self.fuel + 120 <= self.constraints[1]):
+            globals.set_moon_needs('fuel', True)
+            globals.set_moon_request('request', True)
+        if (self.uranium + 75 <= self.constraints[0]):
+            globals.set_moon_needs('uranium', True)
+            globals.set_moon_request('request', True)
         globals.release_moon_needs()
+        globals.release_moon_resquest()
     
     def can_help_moon(self):
         if (self.rockets < self.constraints[2]):
@@ -94,7 +93,7 @@ class SpaceBase(Thread):
     def construct_rocket_to_moon(self):
         rocket = Rocket('LION')
         rocket.init_resources()
-        self.rockets_to_fuel.append(rocket)
+        self.rockets_to_fuel.insert(0, rocket)
         self.rockets += 1
 
     def check_moon_needs(self):
@@ -151,7 +150,6 @@ class SpaceBase(Thread):
     def refuel_cargo(self, rocket):
         globals.acquire_moon_needs()
         if globals.get_moon_needs()['fuel']:
-            globals.set_moon_needs('fuel', False)
             rocket.refuel_cargo(120)
             self.fuel -= 120
         globals.release_moon_needs()
@@ -159,7 +157,6 @@ class SpaceBase(Thread):
     def refuel_uranium_cargo(self, rocket):
         globals.acquire_moon_needs()
         if globals.get_moon_needs()['uranium']:
-            globals.set_moon_needs('uranium', False)
             rocket.refuel_uranium_cargo(75)
             self.uranium -= 75
         globals.release_moon_needs()
@@ -174,18 +171,28 @@ class SpaceBase(Thread):
             if self.uranium > 0 and rocket.name != 'LION':
                 self.refuel_rocket_uranium(rocket, 35)
             if rocket.name == 'LION':
-                if self.fuel >= 120:
+                if self.fuel >= 120 and rocket.fuel_cargo < 120:
                     self.refuel_cargo(rocket)
-                if self.uranium >= 75:
+                if self.uranium >= 75 and rocket.uranium_cargo < 75:
                     self.refuel_uranium_cargo(rocket)
                 return
+
+    def check_fuel_cargo(self, rocket):
+        if globals.get_moon_needs()['fuel']:
+            return rocket.fuel_cargo >= 120
+        return True 
+    
+    def check_uranium_cargo(self, rocket):
+        if globals.get_moon_needs()['uranium']:
+            return rocket.uranium_cargo >= 75
+        return True
 
     def try_launch_rocket(self):
         fuel_needs = globals.get_fuels_needs()
         rocket_executer = globals.get_rocket_executer()
         for rocket in self.rockets_to_fuel:
             if rocket.name == 'LION':
-                if (rocket.fuel >= fuel_needs[self.name][rocket.name] and rocket.fuel_cargo >= 120 and rocket.uranium_cargo >= 75):
+                if (rocket.fuel >= fuel_needs[self.name][rocket.name] and self.check_fuel_cargo(rocket) and self.check_uranium_cargo(rocket)):
                     rocket_executer.submit(rocket.prepare_to_launch_to_moon, base=self)
                     self.rockets_to_fuel.remove(rocket)
             else:

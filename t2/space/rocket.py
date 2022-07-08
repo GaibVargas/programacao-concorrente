@@ -39,28 +39,29 @@ class Rocket:
             return
         if(self.successfull_launch(base)):
             print(f"[{self.name} - {self.id}] launched.")
+            sleep(0.01)
             if (random() < 0.05):
                 self.general_failure()
-                globals.acquire_moon_request()
-                globals.set_moon_request('response', False)
-                globals.release_moon_resquest()
-                return
-            self.land_on_moon()
+            else:
+                self.land_on_moon()
+        self.land_on_moon()
+
+        globals.acquire_moon_request()
+        globals.set_moon_request('response', False)
+        globals.set_moon_request('request', False)
+        globals.acquire_moon_needs()
+        globals.set_moon_needs('fuel', False)
+        globals.set_moon_needs('uranium', False)
+        globals.release_moon_needs()
+        globals.release_moon_resquest()
 
         if acquire_base:
             globals.get_base_launch(base.name.lower()).release()
     
     def land_on_moon(self):
-        print(f"\n\n\n\n\n\n\n[BLABLUBLE] - The {self.name} ROCKET reached the MOON\n\n\n\n\n\n\n")
         moon = globals.get_bases_ref()['moon']
-        globals.get_base_rockets_lock('moon').acquire()
         moon.fuel += self.fuel_cargo
         moon.uranium += self.uranium_cargo
-        globals.acquire_moon_request()
-        globals.set_moon_request('request', False)
-        globals.set_moon_request('response', False)
-        globals.release_moon_resquest()
-        globals.get_base_rockets_lock('moon').release()
     
     def prepare_to_launch(self, base, planet):
         acquire_nuked_planet = globals.get_target_nuke_semaphore(planet.name.lower()).acquire(timeout=0.5)
