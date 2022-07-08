@@ -85,6 +85,22 @@ moon_request = {
 }
 rocket_executer = ThreadPoolExecutor()
 
+def get_moon_request():
+    global moon_request
+    return moon_request
+
+def set_moon_request(key, value):
+    global moon_request
+    moon_request[key] = value
+
+def set_moon_needs(key, value):
+    global moon_needs
+    moon_needs[key] = value
+
+def get_moon_needs():
+    global moon_needs
+    return moon_needs
+
 def get_rocket_executer():
     global rocket_executer
     return rocket_executer
