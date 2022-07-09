@@ -34,8 +34,17 @@ targets_nuke = {
     'europa': Semaphore(value=2),
     'ganimedes': Semaphore(value=2)
 }
-last_nuked_pole = {
-    ''
+last_target_pole = { # True = North, False = South
+    'mars': True,
+    'io': True,
+    'europa': True,
+    'ganimedes': True
+}
+mutex_last_target_pole = {
+    'mars': Lock(),
+    'io': Lock(),
+    'europa': Lock(),
+    'ganimedes': Lock()
 }
 base_launch = {
     'alcantara': Lock(),
@@ -87,6 +96,14 @@ moon_request = {
     'response': False,
 }
 rocket_executer = ThreadPoolExecutor()
+
+def get_last_target_pole(base):
+    global last_target_pole, mutex_last_target_pole
+    mutex_last_target_pole[base].acquire()
+    last = last_target_pole[base]
+    last_target_pole[base] = not last
+    mutex_last_target_pole[base].release()
+    return last
 
 def get_moon_request():
     global moon_request

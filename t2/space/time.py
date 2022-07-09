@@ -24,6 +24,5 @@ class SimulationTime(Thread):
         # Aprimorei a cláusula para não rodar para sempre
         while(True and not globals.all_is_done()):
             print(f"{self.current_time} year(s) have passed...")
-            print(f"{globals.all_is_done()} - {globals.get_thread_wait()}")
             self.current_time+=1
             sleep(1)

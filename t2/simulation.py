@@ -112,8 +112,8 @@ def main():
     oil_earth.join()
     globals.get_rocket_executer().shutdown()
     time_simulation.join()
-    print('******************ACABOU***********************')
-    print(globals.get_simulation_time().simulation_time())
+    print("\n\n##################################### SIMULATION ENDED #####################################\n")
+    print(f"Years to finish the mission: {globals.get_simulation_time().simulation_time()}\n\n")
 
 if __name__ == "__main__":
     main()

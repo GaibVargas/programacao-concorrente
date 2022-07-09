@@ -62,8 +62,13 @@ class Rocket:
         moon = globals.get_bases_ref()['moon']
         moon.fuel += self.fuel_cargo
         moon.uranium += self.uranium_cargo
+        print(f"[TRANSPORT] - The {self.name} {self.id} ROCKET reached the MOON")
     
-    def prepare_to_launch(self, base, planet):
+    def prepare_to_launch(self, base, planet, pole):
+        if pole:
+            self.pole = 'North'
+        else:
+            self.pole = 'South'
         acquire_nuked_planet = globals.get_target_nuke_semaphore(planet.name.lower()).acquire(timeout=0.5)
         acquire_base = globals.get_base_launch(base.name.lower()).acquire(timeout=0.5)
         globals.get_base_rockets_lock(base.name.lower()).acquire()
@@ -80,11 +85,10 @@ class Rocket:
     def nuke(self, planet): # Permitida a alteração
         target = globals.get_target_lock(planet.name.lower())
         target.acquire()
-        planet.terraform -= self.damage() * 10
+        planet.terraform -= self.damage()
         target.release()
         globals.get_nuke_detection_semaphore(planet.name.lower()).release()
-        print(f"[EXPLOSION] - The {self.name} ROCKET reached the planet {planet.name} on North Pole")
-        # print(f"[EXPLOSION] - The {self.name} ROCKET reached the planet {planet.name} on South Pole")
+        print(f"[EXPLOSION] - The {self.name} ROCKET reached the planet {planet.name} on {self.pole} Pole")
     
     def voyage(self, planet): # Permitida a alteração (com ressalvas)
 

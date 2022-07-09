@@ -197,10 +197,11 @@ class SpaceBase(Thread):
                     self.rockets_to_fuel.remove(rocket)
             else:
                 if (rocket.fuel >= fuel_needs[self.name][rocket.name] and rocket.uranium >= 35):
-                    [must_continue ,target] = self.choose_target()
+                    [must_continue, target] = self.choose_target()
                     if not must_continue:
                         return False
-                    rocket_executer.submit(rocket.prepare_to_launch, base=self, planet=target)
+                    pole = globals.get_last_target_pole(target.name.lower())
+                    rocket_executer.submit(rocket.prepare_to_launch, base=self, planet=target, pole=pole)
                     self.rockets_to_fuel.remove(rocket)
         return True
 
@@ -234,6 +235,5 @@ class SpaceBase(Thread):
             self.print_space_base_info()
             globals.release_print()
         
-        print(f'************************{self.name} TERMINANDO***********************')
         globals.decrement_threads_to_wait()
             
