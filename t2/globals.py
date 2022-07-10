@@ -16,54 +16,86 @@ bases = {}
 mines = {}
 simulation_time = None
 
+# Número de threads envolvidas na missão
+# 4 satélites e 4 bases
 threads_to_wait = 8
+
+# Controla o acesso à variável acima
 mutex_threads_to_wait = Lock()
+
+# Controla o acesso à mina de petróleo
 mutex_oil = Lock()
+
+# Controla o acesso à mina de urânio
 mutex_uranium = Lock()
+
+# Define os alvos da terraformação
 target_options = ['mars', 'io', 'europa', 'ganimedes']
+
+# Controla o acesso à variável acima
 mutex_target_options = Lock()
+
+# Controla o acesso aos satélites que monitoram os alvos
 targets = {
     'mars': Lock(),
     'io': Lock(),
     'europa': Lock(),
     'ganimedes': Lock()
 }
+
+# Controla a quantia de explosões simultâneas no alvo
 targets_nuke = {
     'mars': Semaphore(value=2),
     'io': Semaphore(value=2),
     'europa': Semaphore(value=2),
     'ganimedes': Semaphore(value=2)
 }
+
+# Controla o bombardeamento dos polos dos alvos
 last_target_pole = { # True = North, False = South
     'mars': True,
     'io': True,
     'europa': True,
     'ganimedes': True
 }
+
+# Controla o acesso à variável acima
 mutex_last_target_pole = {
     'mars': Lock(),
     'io': Lock(),
     'europa': Lock(),
     'ganimedes': Lock()
 }
+
+# Controla o acesso dos foguetes às bases de lançamentos
 base_launch = {
     'alcantara': Lock(),
     'canaveral cape': Lock(),
     'moscow': Lock(),
     'moon': Lock()
 }
+
+# Controla o acesso ao atributo da classe Base que armazena o quantia de foguetes na base
+# variável usada nas threads de Base e Rocket
 base_rockets_number = {
     'alcantara': Lock(),
     'canaveral cape': Lock(),
     'moscow': Lock(),
     'moon': Lock()
 }
+
+# Controla a detecção de explosões no alvo
+# O semáforo é aberto por um foguete que alcança seu alvo
+# O semáforo é ocupado pelo satélite de monitoramento do alvo
 nuke_detection = {
     'mars': Semaphore(value=0),
     'io': Semaphore(value=0),
     'europa': Semaphore(value=0),
     'ganimedes': Semaphore(value=0)
 }
+
+# Define a quantia necessária de combustível para um determinado tipo de foguete
+# partindo de determinada base
 fuel_needs = {
     'ALCANTARA': {
         'DRAGON': 70,
@@ -85,18 +117,29 @@ fuel_needs = {
         'FALCON': 90,
     }
 }
-mutex_moon_needs = Lock()
-mutex_moon_request = Lock()
+
+# Variável de controle que informa quais são as necessidades atuais da base luna
 moon_needs = {
     'fuel': False,
     'uranium': False,
 }
+
+# Controla o acesso à variavel acima
+mutex_moon_needs = Lock()
+
+# Variável de controle que informa se há um pedido da Lua, e se já foi atendido
 moon_request = {
     'request': False,
     'response': False,
 }
+
+# Controla o acesso à variável acima
+mutex_moon_request = Lock()
+
+# Executor de threads Rocket
 rocket_executer = ThreadPoolExecutor()
 
+# Retorna o pólo viável para bombardeamento e atualiza valor para o pólo contrário
 def get_last_target_pole(base):
     global last_target_pole, mutex_last_target_pole
     mutex_last_target_pole[base].acquire()
@@ -110,7 +153,7 @@ def get_moon_request():
     return moon_request
 
 def set_moon_request(key, value):
-    global moon_request, mutex_moon_request
+    global moon_request
     moon_request[key] = value
 
 def set_moon_needs(key, value):
@@ -141,12 +184,15 @@ def get_thread_wait():
     global threads_to_wait
     return threads_to_wait
 
+# Decremento o número de threads a serem esperadas para o fim do programa
+# Decrementados sempre que um planeta já está terraformado ou uma base terminou seu serviço
 def decrement_threads_to_wait():
     global threads_to_wait, mutex_threads_to_wait
     mutex_threads_to_wait.acquire()
     threads_to_wait -= 1
     mutex_threads_to_wait.release()
 
+# Retorna se a simulação já acabou
 def all_is_done():
     return threads_to_wait == 0
 

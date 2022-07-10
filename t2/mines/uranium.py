@@ -38,6 +38,7 @@ class StoreHouse(Thread):
 
         while(globals.get_release_system() == False):
             pass
-        # Aprimorei a cláusula para não rodar para sempre
+
+        # Roda enquanto os planetas e bases estiverem ativos
         while(not globals.all_is_done()):
             self.produce()

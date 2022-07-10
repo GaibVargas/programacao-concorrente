@@ -100,6 +100,7 @@ def main():
     globals.set_release_system()
 
     # Minhas mudanças para conseguir terminar a execução do programa
+    # Espera o fim de todas as threads criadas
     mars.join()
     io.join()
     ganimedes.join()
@@ -111,7 +112,10 @@ def main():
     uranium_earth.join()
     oil_earth.join()
     time_simulation.join()
+    # Espera o fim das threads Rocket
+    # (pode haver foguetes em viagem quando já foi detectado a terraforma de todos os alvos)
     globals.get_rocket_executer().shutdown()
+    # Retorna ao usuário o tempo de simulação
     print("\n\n##################################### SIMULATION ENDED #####################################\n")
     print(f"Years to finish the mission: {globals.get_simulation_time().simulation_time()}\n\n")
 

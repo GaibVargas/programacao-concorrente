@@ -21,7 +21,8 @@ class SimulationTime(Thread):
     def run(self):
         while(globals.get_release_system() == False):
             pass
-        # Aprimorei a cláusula para não rodar para sempre
+        
+        # Roda enquanto os planetas e bases estiverem ativos
         while(not globals.all_is_done()):
             print(f"{self.current_time} year(s) have passed...")
             self.current_time+=1

@@ -11,6 +11,7 @@ class Planet(Thread):
         self.terraform = terraform
         self.name = name
 
+    # Detecta uma exmplosão
     def nuke_detected(self):
         before_percentage = self.terraform
         while(before_percentage == self.terraform):
@@ -28,7 +29,12 @@ class Planet(Thread):
         while(globals.get_release_system() == False):
             pass
 
+        # Enquanto ainda não estiver sido terraformado, continua a missão
         while(self.terraform > 0):
+            # Semáforo que detecta explosão
+            # Faz com que a thread não fique em espera ocupada
             globals.get_nuke_detection_semaphore(self.name.lower()).acquire()
             self.nuke_detected()
+        
+        # Assim que for terraformado, informa ao sistema global que sua missão de detecção acabou
         globals.decrement_threads_to_wait()

@@ -14,38 +14,50 @@ class Rocket:
             self.fuel_cargo = 0
             self.uranium_cargo = 0
             
+    # Abastece o foguete com combustível
     def refuel(self, value):
         self.fuel += value
     
+    # Abastece o foguete com urânio
     def refuel_uranium(self, value):
         self.uranium += value
     
+    # Inicia os recursos do foguete
+    # Artifício usado para contornar a impossibilidade de alterar o construtor da classe
     def init_resources(self):
         self.fuel = 0
         self.uranium = 0
 
+    # Abastece a carga de combustível do foguete
     def refuel_cargo(self, value):
         self.fuel_cargo += value
     
+    # Abastece a carga de urânio do foguete
     def refuel_uranium_cargo(self, value):
         self.uranium_cargo += value
     
+    # Inicia processo de lançamento do foguete para a Lua
     def prepare_to_launch_to_moon(self, base):
-        acquire_base = globals.get_base_launch(base.name.lower()).acquire(timeout=0.5)
+        # Tenta usar a base de lançamentos
+        if globals.all_is_done():
+            return
+        # Se apossa da base de lançamentos
+        globals.get_base_launch(base.name.lower()).acquire()
         globals.get_base_rockets_lock(base.name.lower()).acquire()
         base.rockets -= 1
         globals.get_base_rockets_lock(base.name.lower()).release()
-        if globals.all_is_done():
-            return
+        globals.get_base_launch(base.name.lower()).release()
+        # Lança o foguete
         if(self.successfull_launch(base)):
             print(f"[{self.name} - {self.id}] launched.")
             sleep(0.01)
             if (random() < 0.05):
                 self.general_failure()
-            else:
+            else: # Se houver sucesso durante a viagem, pousa na lua
                 self.land_on_moon()
-        self.land_on_moon()
 
+        # Informa ao sistema que os recursos pedidos pela lua foram atendidos
+        # No caso de falha no lançamento ou na viagem, um novo pedido será aberto pela base lunar
         globals.acquire_moon_request()
         globals.set_moon_request('response', False)
         globals.set_moon_request('request', False)
@@ -55,33 +67,39 @@ class Rocket:
         globals.release_moon_needs()
         globals.release_moon_resquest()
 
-        if acquire_base:
-            globals.get_base_launch(base.name.lower()).release()
-    
+    # Reabastece a base lunar
     def land_on_moon(self):
         moon = globals.get_bases_ref()['moon']
         moon.fuel += self.fuel_cargo
         moon.uranium += self.uranium_cargo
-        print(f"[TRANSPORT] - The {self.name} {self.id} ROCKET reached the MOON")
+        print(f"\n\n\n\n[TRANSPORT] - The {self.name} {self.id} ROCKET reached the MOON\n\n\n\n")
     
+    # Inicia processo de lançamento do foguete a um alvo de terraformação
     def prepare_to_launch(self, base, planet, pole):
+        if globals.all_is_done():
+            return
+        # Define o polo a ser atingido
         if pole:
             self.pole = 'North'
         else:
             self.pole = 'South'
+        
+        # Verifica se o planeta já não está sendo bombardeado por 2 foguetes
+        # Há um timeout, caso haja dois foguetes, não é necessário esperar que eles atinjam o planeta
+        # O tempo de viagem é superior ao tempo de espera, logo não haverá mais de 2 impactos simultâneos
         acquire_nuked_planet = globals.get_target_nuke_semaphore(planet.name.lower()).acquire(timeout=0.5)
-        acquire_base = globals.get_base_launch(base.name.lower()).acquire(timeout=0.5)
+        # Se apossa da base de lançamentos
+        globals.get_base_launch(base.name.lower()).acquire()
         globals.get_base_rockets_lock(base.name.lower()).acquire()
         base.rockets -= 1
         globals.get_base_rockets_lock(base.name.lower()).release()
-        if globals.all_is_done():
-            return
+        globals.get_base_launch(base.name.lower()).release()
+        # Realiza o lançamento
         self.launch(base, planet)
-        if acquire_base:
-            globals.get_base_launch(base.name.lower()).release()
         if acquire_nuked_planet:
             globals.get_target_nuke_semaphore(planet.name.lower()).release()
  
+    # Aplica dano da explosão no alvo, e sinaliza ao sensor que houve explosão
     def nuke(self, planet): # Permitida a alteração
         target = globals.get_target_lock(planet.name.lower())
         target.acquire()
@@ -97,6 +115,7 @@ class Rocket:
         # usar essa função.
         self.simulation_time_voyage(planet)
         failure =  self.do_we_have_a_problem()
+        # Se não houver falhas durante a viagem, bombardeia o alvo
         if not failure:
             self.nuke(planet)
 
