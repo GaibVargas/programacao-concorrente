@@ -110,8 +110,8 @@ def main():
     moon.join()
     uranium_earth.join()
     oil_earth.join()
-    globals.get_rocket_executer().shutdown()
     time_simulation.join()
+    globals.get_rocket_executer().shutdown()
     print("\n\n##################################### SIMULATION ENDED #####################################\n")
     print(f"Years to finish the mission: {globals.get_simulation_time().simulation_time()}\n\n")
 

@@ -28,7 +28,7 @@ class Planet(Thread):
         while(globals.get_release_system() == False):
             pass
 
-        while(True and self.terraform > 0):
+        while(self.terraform > 0):
             globals.get_nuke_detection_semaphore(self.name.lower()).acquire()
             self.nuke_detected()
         globals.decrement_threads_to_wait()

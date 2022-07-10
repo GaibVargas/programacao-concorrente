@@ -215,7 +215,7 @@ class SpaceBase(Thread):
         
         self.rockets_to_fuel = []
 
-        while(True and len(globals.get_target_options()) > 0):
+        while(len(globals.get_target_options()) > 0):
             if (self.name != "MOON"):
                 mines = globals.get_mines_ref()
                 self.mine_resources(mines)
