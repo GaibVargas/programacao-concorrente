@@ -72,7 +72,7 @@ class Rocket:
         moon = globals.get_bases_ref()['moon']
         moon.fuel += self.fuel_cargo
         moon.uranium += self.uranium_cargo
-        print(f"\n\n\n\n[TRANSPORT] - The {self.name} {self.id} ROCKET reached the MOON\n\n\n\n")
+        print(f"[TRANSPORT] - The {self.name} {self.id} ROCKET reached the MOON")
     
     # Inicia processo de lançamento do foguete a um alvo de terraformação
     def prepare_to_launch(self, base, planet, pole):
